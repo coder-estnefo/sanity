@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Shows how many days you have been free.</string>
+    <string name="widget_setup">Open Sanity to set up</string>
+    <string name="widget_choose">Choose a tracker for this widget</string>
+    <string name="widget_no_trackers">Add a tracker in Sanity first, then place the widget again.</string>
+</resources>
+

@@ -5,8 +5,17 @@ import 'package:sanity/features/tracker/data/repositories/tracker_repository_imp
 import 'package:sanity/features/tracker/domain/entities/addiction.dart';
 import 'package:sanity/features/tracker/domain/usecases/tracker_usecases.dart';
 import 'package:sanity/features/tracker/presentation/bloc/tracker_bloc.dart';
+import 'package:sanity/features/widgets/domain/repositories/home_widget_repository.dart';
+import 'package:sanity/features/widgets/domain/usecases/sync_home_widgets.dart';
+
+class _FakeSync implements HomeWidgetRepository {
+  final calls = <List<Addiction>>[];
+  @override
+  Future<void> sync(List<Addiction> trackers) async => calls.add(trackers);
+}
 
 void main() {
+  late _FakeSync sync;
   late TrackerRepositoryImpl repo;
   final today = DateTime(2026, 6, 10, 14);
 
@@ -55,6 +64,32 @@ void main() {
     verify: (b) {
       expect(b.state.items, [a]);
       expect(b.state.loading, false);
+    },
+  );
+
+  blocTest<TrackerBloc, TrackerState>(
+    'syncs home widgets after every reload',
+    build: () {
+      sync = _FakeSync();
+      return TrackerBloc(
+        getAddictions: GetAddictions(repo),
+        saveAddiction: SaveAddiction(repo),
+        deleteAddiction: DeleteAddiction(repo),
+        resetAddiction: ResetAddiction(repo),
+        syncHomeWidgets: SyncHomeWidgets(sync),
+        clock: () => today,
+      );
+    },
+    act: (b) async {
+      b.add(SaveTracker(a));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      b.add(DeleteTracker(a.id));
+    },
+    wait: const Duration(milliseconds: 100),
+    verify: (_) {
+      expect(sync.calls.length, 2);
+      expect(sync.calls.first, [a]);
+      expect(sync.calls.last, isEmpty);
     },
   );
 

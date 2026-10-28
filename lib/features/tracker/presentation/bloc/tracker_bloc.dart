@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/addiction.dart';
 import '../../domain/usecases/tracker_usecases.dart';
+import '../../../widgets/domain/usecases/sync_home_widgets.dart';
 
 sealed class TrackerEvent extends Equatable {
   const TrackerEvent();
@@ -78,11 +79,13 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
     required SaveAddiction saveAddiction,
     required DeleteAddiction deleteAddiction,
     required ResetAddiction resetAddiction,
+    SyncHomeWidgets? syncHomeWidgets,
     DateTime Function()? clock,
   })  : _get = getAddictions,
         _save = saveAddiction,
         _delete = deleteAddiction,
         _reset = resetAddiction,
+        _sync = syncHomeWidgets,
         _clock = clock ?? DateTime.now,
         super(const TrackerState()) {
     on<LoadTrackers>((e, emit) => _reload(emit));
@@ -97,12 +100,14 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
   final SaveAddiction _save;
   final DeleteAddiction _delete;
   final ResetAddiction _reset;
+  final SyncHomeWidgets? _sync;
   final DateTime Function() _clock;
   Timer? _timer;
 
   Future<void> _reload(Emitter<TrackerState> emit) async {
     final items = await _get();
     emit(state.copyWith(items: items, now: _clock(), loading: false));
+    await _sync?.call(items);
   }
 
   Future<void> _run(Emitter<TrackerState> emit, Future<void> Function() op) async {

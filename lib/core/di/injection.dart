@@ -17,6 +17,9 @@ import '../../features/tracker/domain/repositories/tracker_repository.dart';
 import '../../features/tracker/domain/usecases/tracker_usecases.dart';
 import '../../features/tracker/presentation/bloc/tracker_bloc.dart';
 import '../storage/key_value_store.dart';
+import '../../features/widgets/data/repositories/home_widget_repository_impl.dart';
+import '../../features/widgets/domain/repositories/home_widget_repository.dart';
+import '../../features/widgets/domain/usecases/sync_home_widgets.dart';
 
 final sl = GetIt.instance;
 
@@ -41,6 +44,8 @@ Future<void> configureDependencies() async {
       ));
   sl.registerLazySingleton<NotificationRepository>(
       () => NotificationRepositoryImpl(sl(), sl()));
+  sl.registerLazySingleton<HomeWidgetRepository>(
+      () => HomeWidgetRepositoryImpl(PluginHomeWidgetGateway()));
 
   // Use cases
   sl.registerLazySingleton(() => GetAddictions(sl()));
@@ -48,6 +53,7 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton(() => DeleteAddiction(sl()));
   sl.registerLazySingleton(() => ResetAddiction(sl()));
   sl.registerLazySingleton(() => GetDailyQuotes(sl()));
+  sl.registerLazySingleton(() => SyncHomeWidgets(sl()));
 
   // BLoCs
   sl.registerFactory(() => TrackerBloc(
@@ -55,6 +61,7 @@ Future<void> configureDependencies() async {
         saveAddiction: sl(),
         deleteAddiction: sl(),
         resetAddiction: sl(),
+        syncHomeWidgets: sl(),
       ));
   sl.registerFactory(() => QuotesBloc(sl()));
   sl.registerFactory(() => NotificationBloc(sl()));
