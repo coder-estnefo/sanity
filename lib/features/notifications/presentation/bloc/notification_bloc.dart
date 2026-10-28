@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../tracker/domain/usecases/tracker_usecases.dart';
 import '../../domain/entities/reminder_settings.dart';
 import '../../domain/repositories/notification_repository.dart';
 
@@ -31,8 +32,10 @@ class NotificationState extends Equatable {
 }
 
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
-  NotificationBloc(this._repo)
-      : super(NotificationState(settings: _repo.getSettings())) {
+  NotificationBloc(
+    this._repo, {
+    this.getAddictions,
+  }) : super(NotificationState(settings: _repo.getSettings())) {
     on<InitNotifications>((e, emit) async {
       final settings = _repo.getSettings();
       var granted = true;
@@ -50,13 +53,17 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   }
 
   final NotificationRepository _repo;
+  final GetAddictions? getAddictions;
 
   Future<void> _apply(ReminderSettings s, bool granted) async {
     if (s.enabled && granted) {
       await _repo.reschedule(s);
+      if (getAddictions != null) {
+        final addictions = await getAddictions!();
+        await _repo.scheduleMilestones(addictions);
+      }
     } else {
       await _repo.cancelAll();
     }
   }
 }
-

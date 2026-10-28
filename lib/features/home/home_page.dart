@@ -7,6 +7,8 @@ import '../tracker/presentation/bloc/tracker_bloc.dart';
 import '../tracker/presentation/pages/add_edit_page.dart';
 import '../quotes/presentation/widgets/quotes_section.dart';
 import '../notifications/presentation/pages/settings_page.dart';
+import '../notifications/presentation/pages/notifications_page.dart';
+import '../notifications/presentation/bloc/notification_inbox_bloc.dart';
 import '../../core/theme/app_theme.dart';
 
 class HomePage extends StatelessWidget {
@@ -20,9 +22,43 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Sanity'),
         actions: [
+          BlocBuilder<NotificationInboxBloc, NotificationInboxState>(
+            builder: (context, state) {
+              final count = state.allEntries.length;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    tooltip: 'Notifications',
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                    ),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.sage,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 8,
+                          minHeight: 8,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           IconButton(
             tooltip: 'Reminder settings',
-            icon: const Icon(Icons.notifications_none),
+            icon: const Icon(Icons.tune_outlined),
             onPressed: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const SettingsPage())),
           ),
