@@ -10,8 +10,11 @@ import 'package:sanity/features/widgets/domain/usecases/sync_home_widgets.dart';
 
 class _FakeSync implements HomeWidgetRepository {
   final calls = <List<Addiction>>[];
+  final pinned = <String>[];
   @override
   Future<void> sync(List<Addiction> trackers) async => calls.add(trackers);
+  @override
+  Future<void> pinTracker(String id) async => pinned.add(id);
 }
 
 void main() {

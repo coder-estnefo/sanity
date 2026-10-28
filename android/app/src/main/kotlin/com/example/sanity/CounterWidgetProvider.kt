@@ -44,13 +44,15 @@ class CounterWidgetProvider : HomeWidgetProvider() {
             appWidgetId: Int,
         ): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.counter_widget)
+            // Priority: 1) Explicitly configured ID for this widget, 2) Pinned tracker ID, 3) First tracker in list
             val chosenId = prefs.getString(WidgetData.widgetKey(appWidgetId), null)
-            val tracker = trackers.firstOrNull { it.id == chosenId }
+                ?: prefs.getString(WidgetData.PINNED_TRACKER_KEY, null)
+            val tracker = trackers.firstOrNull { it.id == chosenId } ?: trackers.firstOrNull()
 
             if (tracker == null) {
-                views.setTextViewText(R.id.widget_days, "–")
-                views.setTextViewText(R.id.widget_label, context.getString(R.string.widget_setup))
-                views.setTextViewText(R.id.widget_name, "")
+                views.setTextViewText(R.id.widget_days, "0")
+                views.setTextViewText(R.id.widget_label, "days free")
+                views.setTextViewText(R.id.widget_name, "Tap to add tracker")
             } else {
                 val days = tracker.daysFree()
                 views.setTextViewText(R.id.widget_days, days.toString())
@@ -73,4 +75,3 @@ class CounterWidgetProvider : HomeWidgetProvider() {
         }
     }
 }
-

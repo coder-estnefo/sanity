@@ -9,6 +9,8 @@ import '../quotes/presentation/widgets/quotes_section.dart';
 import '../notifications/presentation/pages/settings_page.dart';
 import '../notifications/presentation/pages/notifications_page.dart';
 import '../notifications/presentation/bloc/notification_inbox_bloc.dart';
+import '../widgets/domain/repositories/home_widget_repository.dart';
+import '../../core/di/injection.dart';
 import '../../core/theme/app_theme.dart';
 
 class HomePage extends StatelessWidget {
@@ -143,6 +145,7 @@ class _TrackerCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   onSelected: (v) => _onMenu(context, v),
                   itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'pin', child: Text('Pin to home widget')),
                     PopupMenuItem(value: 'edit', child: Text('Edit')),
                     PopupMenuItem(value: 'reset', child: Text('I relapsed (reset)')),
                     PopupMenuItem(value: 'delete', child: Text('Delete')),
@@ -185,6 +188,13 @@ class _TrackerCard extends StatelessWidget {
   Future<void> _onMenu(BuildContext context, String v) async {
     final bloc = context.read<TrackerBloc>();
     switch (v) {
+      case 'pin':
+        await sl<HomeWidgetRepository>().pinTracker(addiction.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Pinned "${addiction.name}" to home widget')),
+          );
+        }
       case 'edit':
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => AddEditPage(existing: addiction)));

@@ -17,8 +17,10 @@ class PluginHomeWidgetGateway implements HomeWidgetGateway {
       HomeWidget.saveWidgetData<String>(key, value);
 
   @override
-  Future<void> refresh() =>
-      HomeWidget.updateWidget(androidName: 'CounterWidgetProvider');
+  Future<void> refresh() => HomeWidget.updateWidget(
+        androidName: 'CounterWidgetProvider',
+        qualifiedAndroidName: 'com.example.sanity.CounterWidgetProvider',
+      );
 }
 
 class HomeWidgetRepositoryImpl implements HomeWidgetRepository {
@@ -26,6 +28,7 @@ class HomeWidgetRepositoryImpl implements HomeWidgetRepository {
   final HomeWidgetGateway _gateway;
 
   static const trackersKey = 'trackers';
+  static const pinnedTrackerKey = 'pinned_tracker_id';
 
   static String _date(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -43,5 +46,14 @@ class HomeWidgetRepositoryImpl implements HomeWidgetRepository {
       // Widgets are best-effort; never break the app.
     }
   }
-}
 
+  @override
+  Future<void> pinTracker(String id) async {
+    try {
+      await _gateway.save(pinnedTrackerKey, id);
+      await _gateway.refresh();
+    } catch (_) {
+      // Widgets are best-effort; never break the app.
+    }
+  }
+}

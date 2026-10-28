@@ -41,5 +41,11 @@ void main() {
     await HomeWidgetRepositoryImpl(gw).sync([]);
     expect(gw.refreshes, 0);
   });
-}
 
+  test('pinTracker saves pinned_tracker_id and calls refresh', () async {
+    final gw = FakeGateway();
+    await HomeWidgetRepositoryImpl(gw).pinTracker('addiction_123');
+    expect(gw.saved['pinned_tracker_id'], 'addiction_123');
+    expect(gw.refreshes, 1);
+  });
+}

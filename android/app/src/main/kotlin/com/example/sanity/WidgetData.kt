@@ -14,6 +14,7 @@ data class WidgetTracker(val id: String, val name: String, val quitDate: LocalDa
 object WidgetData {
     const val PREFS_NAME = "HomeWidgetPreferences"
     private const val TRACKERS_KEY = "trackers"
+    const val PINNED_TRACKER_KEY = "pinned_tracker_id"
 
     fun widgetKey(appWidgetId: Int) = "widget_$appWidgetId"
 
@@ -34,4 +35,3 @@ object WidgetData {
         }
     }
 }
-
