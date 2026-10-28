@@ -15,15 +15,45 @@ class NotificationsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
-          BlocBuilder<NotificationInboxBloc, NotificationInboxState>(
-            builder: (context, state) {
-              if (state.allEntries.isEmpty) return const SizedBox.shrink();
-              return IconButton(
-                tooltip: 'Clear all',
-                icon: const Icon(Icons.delete_sweep_outlined),
-                onPressed: () => _confirmClear(context),
+          PopupMenuButton<NotificationKind>(
+            tooltip: 'Send test notification',
+            icon: const Icon(Icons.add_alert_outlined),
+            onSelected: (kind) {
+              context
+                  .read<NotificationInboxBloc>()
+                  .add(SendTestNotificationEvent(kind: kind));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(kind == NotificationKind.hard
+                      ? 'Milestone celebration triggered!'
+                      : 'Gentle reminder notification triggered!'),
+                  duration: const Duration(seconds: 2),
+                ),
               );
             },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: NotificationKind.soft,
+                child: Row(
+                  children: [
+                    Icon(Icons.spa_outlined, size: 18, color: AppTheme.sage),
+                    SizedBox(width: 8),
+                    Text('Test gentle reminder'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: NotificationKind.hard,
+                child: Row(
+                  children: [
+                    Icon(Icons.emoji_events_outlined,
+                        size: 18, color: AppTheme.gold),
+                    SizedBox(width: 8),
+                    Text('Test milestone alert'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -46,7 +76,18 @@ class NotificationsPage extends StatelessWidget {
                         itemCount: entries.length,
                         itemBuilder: (context, index) {
                           final item = entries[index];
-                          return _NotificationCard(entry: item);
+                          final showDateHeader = index == 0 ||
+                              !_isSameDay(
+                                  entries[index - 1].timestamp, item.timestamp);
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (showDateHeader)
+                                _DateGroupHeader(timestamp: item.timestamp),
+                              _NotificationCard(entry: item),
+                            ],
+                          );
                         },
                       ),
               ),
@@ -57,30 +98,44 @@ class NotificationsPage extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmClear(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Clear all notifications?'),
-        content: const Text(
-          'This will remove all saved gentle reminders and milestone celebrations from your inbox.',
+  static bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+}
+
+class _DateGroupHeader extends StatelessWidget {
+  const _DateGroupHeader({required this.timestamp});
+  final DateTime timestamp;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(timestamp.year, timestamp.month, timestamp.day);
+
+    String label;
+    if (date == today) {
+      label = 'Today';
+    } else if (date == today.subtract(const Duration(days: 1))) {
+      label = 'Yesterday';
+    } else if (date.year == today.year) {
+      label = DateFormat.MMMMd().format(timestamp);
+    } else {
+      label = DateFormat.yMMMMd().format(timestamp);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 6, left: 4),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: Colors.black.withValues(alpha: 0.45),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
     );
-
-    if (ok == true && context.mounted) {
-      context.read<NotificationInboxBloc>().add(const ClearAllNotifications());
-    }
   }
 }
 
@@ -156,90 +211,60 @@ class _NotificationCard extends StatelessWidget {
     final icon = isHard ? Icons.emoji_events_outlined : Icons.spa_outlined;
     final badgeLabel = isHard ? 'MILESTONE' : 'GENTLE MOTIVATION';
 
-    return Dismissible(
-      key: Key(entry.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.red.shade100,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Icon(Icons.delete_outline, color: Colors.red.shade700),
-      ),
-      onDismissed: (_) {
-        context
-            .read<NotificationInboxBloc>()
-            .add(DeleteInboxNotification(entry.id));
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        color: cardBg,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, size: 18, color: accentColor),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: cardBg,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    badgeLabel,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: accentColor,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    _formatTime(entry.timestamp),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.black45,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                entry.body,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  height: 1.4,
-                  fontWeight: isHard ? FontWeight.w600 : FontWeight.normal,
+                  child: Icon(icon, size: 18, color: accentColor),
                 ),
+                const SizedBox(width: 8),
+                Text(
+                  badgeLabel,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: accentColor,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  _formatTime(entry.timestamp),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.black45,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              entry.body,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                height: 1.4,
+                fontWeight: isHard ? FontWeight.w600 : FontWeight.normal,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   String _formatTime(DateTime dt) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final date = DateTime(dt.year, dt.month, dt.day);
-
-    final timeStr = DateFormat.jm().format(dt);
-    if (date == today) {
-      return 'Today, $timeStr';
-    } else if (date == today.subtract(const Duration(days: 1))) {
-      return 'Yesterday, $timeStr';
-    } else {
-      return '${DateFormat.MMMd().format(dt)}, $timeStr';
-    }
+    return DateFormat.jm().format(dt);
   }
 }
 
@@ -251,9 +276,8 @@ class _EmptyInbox extends StatelessWidget {
   Widget build(BuildContext context) {
     final message = switch (filter) {
       NotificationFilter.all =>
-        'No notifications yet.\nGentle motivations and milestone celebrations will appear here.',
-      NotificationFilter.soft =>
-        'No gentle reminders recorded yet.',
+        'No notifications yet.\nGentle motivations and milestone celebrations will appear here as they occur.',
+      NotificationFilter.soft => 'No gentle reminders recorded yet.',
       NotificationFilter.hard =>
         'No milestone celebrations yet.\nKeep going, your victories are coming!',
     };
@@ -278,10 +302,21 @@ class _EmptyInbox extends StatelessWidget {
                 height: 1.5,
               ),
             ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () {
+                context.read<NotificationInboxBloc>().add(
+                      const SendTestNotificationEvent(
+                        kind: NotificationKind.soft,
+                      ),
+                    );
+              },
+              icon: const Icon(Icons.notifications_active_outlined),
+              label: const Text('Send test notification'),
+            ),
           ],
         ),
       ),
     );
   }
 }
-

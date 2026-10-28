@@ -19,6 +19,7 @@ void main() {
       timestamp: DateTime(2026),
       kind: NotificationKind.soft,
     ));
+    registerFallbackValue(NotificationKind.soft);
   });
 
   late MemoryKeyValueStore store;
@@ -47,17 +48,15 @@ void main() {
     mockRepo = MockNotificationRepository();
 
     when(() => mockRepo.getHistory()).thenAnswer((_) => historyDs.getHistory());
-    when(() => mockRepo.addHistoryEntry(any()))
-        .thenAnswer((inv) => historyDs.addEntry(inv.positionalArguments.first as NotificationEntry));
-    when(() => mockRepo.deleteHistoryEntry(any()))
-        .thenAnswer((inv) => historyDs.deleteEntry(inv.positionalArguments.first as String));
-    when(() => mockRepo.clearHistory()).thenAnswer((_) => historyDs.clear());
+    when(() => mockRepo.sendTestNotification(
+          kind: any(named: 'kind'),
+          message: any(named: 'message'),
+        )).thenAnswer((_) async {});
   });
 
   NotificationInboxBloc buildBloc() => NotificationInboxBloc(
         getHistory: GetNotificationHistory(mockRepo),
-        deleteEntry: DeleteNotificationEntry(mockRepo),
-        clearHistory: ClearNotificationHistory(mockRepo),
+        triggerTest: TriggerTestNotificationUseCase(mockRepo),
       );
 
   test('initial state has empty entries and all filter', () {
@@ -69,7 +68,7 @@ void main() {
   });
 
   blocTest<NotificationInboxBloc, NotificationInboxState>(
-    'loads history with soft and hard entries',
+    'loads history with soft and hard entries sorted newest first',
     setUp: () async {
       await historyDs.addEntry(softEntry);
       await historyDs.addEntry(hardEntry);
@@ -80,6 +79,9 @@ void main() {
       expect(b.state.loading, isFalse);
       expect(b.state.allEntries.length, 2);
       expect(b.state.visibleEntries.length, 2);
+      // Hard entry (11:00) should be first, soft entry (09:00) second
+      expect(b.state.visibleEntries.first.id, 'hard_1');
+      expect(b.state.visibleEntries.last.id, 'soft_1');
     },
   );
 
@@ -105,31 +107,15 @@ void main() {
   );
 
   blocTest<NotificationInboxBloc, NotificationInboxState>(
-    'deletes individual entry from inbox',
-    setUp: () async {
-      await historyDs.addEntry(softEntry);
-      await historyDs.addEntry(hardEntry);
-    },
+    'sends test notification and reloads inbox',
     build: buildBloc,
-    act: (b) => b.add(const DeleteInboxNotification('soft_1')),
+    act: (b) => b.add(const SendTestNotificationEvent(kind: NotificationKind.soft)),
     verify: (b) {
-      expect(b.state.allEntries.length, 1);
-      expect(b.state.allEntries.first.id, 'hard_1');
-    },
-  );
-
-  blocTest<NotificationInboxBloc, NotificationInboxState>(
-    'clears all entries from inbox',
-    setUp: () async {
-      await historyDs.addEntry(softEntry);
-      await historyDs.addEntry(hardEntry);
-    },
-    build: buildBloc,
-    act: (b) => b.add(const ClearAllNotifications()),
-    verify: (b) {
-      expect(b.state.allEntries, isEmpty);
-      expect(b.state.visibleEntries, isEmpty);
+      verify(() => mockRepo.sendTestNotification(
+            kind: NotificationKind.soft,
+            message: any(named: 'message'),
+          )).called(1);
+      verify(() => mockRepo.getHistory()).called(1);
     },
   );
 }
-

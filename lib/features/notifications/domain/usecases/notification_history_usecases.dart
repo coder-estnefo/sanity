@@ -29,3 +29,14 @@ class RecordNotificationEntry {
   Future<void> call(NotificationEntry entry) => _repo.addHistoryEntry(entry);
 }
 
+class TriggerTestNotificationUseCase {
+  TriggerTestNotificationUseCase(this._repo);
+  final NotificationRepository _repo;
+
+  Future<void> call({
+    NotificationKind kind = NotificationKind.soft,
+    String? message,
+  }) =>
+      _repo.sendTestNotification(kind: kind, message: message);
+}
+

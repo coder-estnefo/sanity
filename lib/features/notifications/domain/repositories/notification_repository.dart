@@ -18,6 +18,11 @@ abstract class NotificationRepository {
   Future<void> addHistoryEntry(NotificationEntry entry);
   Future<void> deleteHistoryEntry(String id);
   Future<void> clearHistory();
+  Future<void> syncDeliveredNotifications({DateTime? now});
+  Future<void> sendTestNotification({
+    NotificationKind kind = NotificationKind.soft,
+    String? message,
+  });
 
   /// Milestone scheduling
   Future<void> scheduleMilestones(List<Addiction> addictions, {DateTime? now});

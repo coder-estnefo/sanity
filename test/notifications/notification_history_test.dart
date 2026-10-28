@@ -32,13 +32,14 @@ void main() {
     expect(await dataSource.getHistory(), isEmpty);
   });
 
-  test('adds and persists entries, sorted newest first', () async {
-    await dataSource.addEntry(softEntry);
+  test('adds and persists entries, sorted newest first regardless of insertion order', () async {
+    // Add newer entry first, then older entry
     await dataSource.addEntry(hardEntry);
+    await dataSource.addEntry(softEntry);
 
     final history = await dataSource.getHistory();
     expect(history.length, 2);
-    // Hard entry (14:00) should be before soft entry (10:00)
+    // Hard entry (14:00) must be before soft entry (10:00)
     expect(history.first.id, 'h1');
     expect(history.last.id, 's1');
   });
@@ -60,5 +61,21 @@ void main() {
     await dataSource.clear();
     expect(await dataSource.getHistory(), isEmpty);
   });
-}
 
+  test('sanitizes away future synthetic entries', () async {
+    final futureEntry = NotificationEntry(
+      id: 'f1',
+      title: 'Future Fake',
+      body: 'I should not be here yet.',
+      timestamp: DateTime.now().add(const Duration(days: 2)),
+      kind: NotificationKind.soft,
+    );
+
+    await dataSource.addEntry(futureEntry);
+    await dataSource.addEntry(softEntry);
+
+    final history = await dataSource.getHistory();
+    expect(history.length, 1);
+    expect(history.first.id, 's1');
+  });
+}

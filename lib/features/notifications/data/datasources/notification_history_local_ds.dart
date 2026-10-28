@@ -24,11 +24,16 @@ class NotificationHistoryLocalDataSourceImpl
     if (raw == null) return [];
     try {
       final list = jsonDecode(raw) as List;
-      return list
+      final now = DateTime.now();
+      // Only return real notifications that have actually occurred (timestamp <= now + 1 min grace)
+      final maxAllowedTime = now.add(const Duration(minutes: 1));
+      final entries = list
           .map((e) => NotificationEntryModel.fromJson(
               Map<String, dynamic>.from(e as Map)))
+          .where((e) => e.timestamp.isBefore(maxAllowedTime))
           .toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return entries;
     } catch (_) {
       return [];
     }
@@ -36,8 +41,10 @@ class NotificationHistoryLocalDataSourceImpl
 
   @override
   Future<void> saveHistory(List<NotificationEntry> entries) async {
+    final sorted = [...entries]
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     final json = jsonEncode(
-      entries.map((e) => NotificationEntryModel.toJson(e)).toList(),
+      sorted.map((e) => NotificationEntryModel.toJson(e)).toList(),
     );
     await _store.write(_key, json);
   }
@@ -47,7 +54,8 @@ class NotificationHistoryLocalDataSourceImpl
     final history = await getHistory();
     // Prevent duplicate entries with the same id
     history.removeWhere((e) => e.id == entry.id);
-    history.insert(0, entry);
+    history.add(entry);
+    history.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     await saveHistory(history);
   }
 

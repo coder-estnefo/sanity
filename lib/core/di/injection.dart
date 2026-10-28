@@ -63,6 +63,7 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton(() => DeleteNotificationEntry(sl()));
   sl.registerLazySingleton(() => ClearNotificationHistory(sl()));
   sl.registerLazySingleton(() => RecordNotificationEntry(sl()));
+  sl.registerLazySingleton(() => TriggerTestNotificationUseCase(sl()));
 
   // BLoCs
   sl.registerFactory(() => TrackerBloc(
@@ -76,7 +77,6 @@ Future<void> configureDependencies() async {
   sl.registerFactory(() => NotificationBloc(sl(), getAddictions: sl()));
   sl.registerFactory(() => NotificationInboxBloc(
         getHistory: sl(),
-        deleteEntry: sl(),
-        clearHistory: sl(),
+        triggerTest: sl(),
       ));
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../domain/entities/notification_entry.dart';
 import '../../domain/entities/reminder_settings.dart';
 import '../bloc/notification_bloc.dart';
+import '../bloc/notification_inbox_bloc.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -74,6 +76,26 @@ class SettingsPage extends StatelessWidget {
                     DropdownMenuItem(value: ReminderCount.five, child: Text('5')),
                   ],
                 ),
+              ),
+              const Divider(height: 32),
+              ListTile(
+                leading: const Icon(Icons.notifications_active_outlined),
+                title: const Text('Send test notification'),
+                subtitle: const Text(
+                    'Trigger an immediate reminder to verify alerts & inbox'),
+                onTap: () {
+                  context.read<NotificationInboxBloc>().add(
+                        const SendTestNotificationEvent(
+                            kind: NotificationKind.soft),
+                      );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'Test notification sent! Check your notification shade.'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
               ),
             ],
           );

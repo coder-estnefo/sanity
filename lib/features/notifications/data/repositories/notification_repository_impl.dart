@@ -15,12 +15,14 @@ class NotificationRepositoryImpl implements NotificationRepository {
     this._store,
     this._service, {
     NotificationHistoryLocalDataSource? historyDataSource,
-  }) : _historyDs = historyDataSource ?? NotificationHistoryLocalDataSourceImpl(_store);
+  }) : _historyDs =
+            historyDataSource ?? NotificationHistoryLocalDataSourceImpl(_store);
 
   final KeyValueStore _store;
   final NotificationService _service;
   final NotificationHistoryLocalDataSource _historyDs;
   static const _key = 'reminder_settings';
+  static const _scheduledRemindersKey = 'scheduled_reminders_pending';
 
   @override
   ReminderSettings getSettings() {
@@ -43,21 +45,87 @@ class NotificationRepositoryImpl implements NotificationRepository {
     final plan = planReminders(now: currentTime, settings: settings);
     await _service.scheduleAll(plan);
 
-    // Save scheduled reminders that start today to history
-    // so the inbox has today's gentle motivations
-    for (final r in plan.take(3)) {
-      await _historyDs.addEntry(NotificationEntry(
-        id: 'soft_${r.id}',
-        title: 'Gentle Reminder',
-        body: r.message,
-        timestamp: r.time,
-        kind: NotificationKind.soft,
-      ));
+    // Save pending reminders so when their scheduled time arrives,
+    // they transition into real notification history.
+    final jsonList = plan
+        .map((r) => {
+              'id': r.id,
+              'time': r.time.toIso8601String(),
+              'message': r.message,
+            })
+        .toList();
+    await _store.write(_scheduledRemindersKey, jsonEncode(jsonList));
+  }
+
+  @override
+  Future<void> syncDeliveredNotifications({DateTime? now}) async {
+    final currentTime = now ?? DateTime.now();
+
+    final rawPending = _store.read(_scheduledRemindersKey);
+    if (rawPending != null) {
+      try {
+        final list = (jsonDecode(rawPending) as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        final remaining = <Map<String, dynamic>>[];
+
+        for (final item in list) {
+          final time = DateTime.parse(item['time'] as String);
+          if (time.isBefore(currentTime) || time.isAtSameMomentAs(currentTime)) {
+            // This reminder has legitimately arrived in the real world
+            final id =
+                'delivered_soft_${item['id']}_${time.millisecondsSinceEpoch}';
+            await _historyDs.addEntry(NotificationEntry(
+              id: id,
+              title: 'Gentle Reminder',
+              body: item['message'] as String,
+              timestamp: time,
+              kind: NotificationKind.soft,
+            ));
+          } else {
+            remaining.add(item);
+          }
+        }
+        await _store.write(_scheduledRemindersKey, jsonEncode(remaining));
+      } catch (_) {}
     }
   }
 
   @override
-  Future<void> scheduleMilestones(List<Addiction> addictions, {DateTime? now}) async {
+  Future<void> sendTestNotification({
+    NotificationKind kind = NotificationKind.soft,
+    String? message,
+  }) async {
+    final now = DateTime.now();
+    final isHard = kind == NotificationKind.hard;
+    final title = isHard ? 'Milestone Reached! 🎉' : 'Gentle Reminder';
+    final body = message ??
+        (isHard
+            ? 'You achieved a milestone! Every moment of strength builds your new life.'
+            : 'Breathe deeply. You are stronger than your urges right now.');
+    final entryId = 'test_${kind.name}_${now.millisecondsSinceEpoch}';
+
+    // Show on system notification drawer
+    await _service.showNow(
+      id: now.millisecondsSinceEpoch.remainder(100000),
+      title: title,
+      body: body,
+      kind: kind,
+    );
+
+    // Save to real notification history
+    await _historyDs.addEntry(NotificationEntry(
+      id: entryId,
+      title: title,
+      body: body,
+      timestamp: now,
+      kind: kind,
+    ));
+  }
+
+  @override
+  Future<void> scheduleMilestones(List<Addiction> addictions,
+      {DateTime? now}) async {
     final currentTime = now ?? DateTime.now();
     final milestones = MilestonePlanner.planMilestones(
       addictions: addictions,
@@ -65,7 +133,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     );
     await _service.scheduleMilestones(milestones);
 
-    // Also record achieved milestones in history for past milestones
+    // Record achieved milestones in history for past milestones
     for (final a in addictions) {
       final days = a.daysFreeAt(currentTime);
       for (final m in MilestonePlanner.milestoneDays) {
@@ -77,13 +145,17 @@ class NotificationRepositoryImpl implements NotificationRepository {
             9,
             0,
           );
-          await _historyDs.addEntry(NotificationEntry(
-            id: 'milestone_${a.id}_$m',
-            title: 'Milestone Reached! 🎉',
-            body: 'You have been $m days free from ${a.name}! A monumental victory.',
-            timestamp: reachedDate,
-            kind: NotificationKind.hard,
-          ));
+          if (reachedDate.isBefore(currentTime) ||
+              reachedDate.isAtSameMomentAs(currentTime)) {
+            await _historyDs.addEntry(NotificationEntry(
+              id: 'milestone_${a.id}_$m',
+              title: 'Milestone Reached! 🎉',
+              body:
+                  'You have been $m days free from ${a.name}! A monumental victory.',
+              timestamp: reachedDate,
+              kind: NotificationKind.hard,
+            ));
+          }
         }
       }
     }
@@ -93,7 +165,10 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<void> cancelAll() => _service.cancelAll();
 
   @override
-  Future<List<NotificationEntry>> getHistory() => _historyDs.getHistory();
+  Future<List<NotificationEntry>> getHistory() async {
+    await syncDeliveredNotifications();
+    return _historyDs.getHistory();
+  }
 
   @override
   Future<void> addHistoryEntry(NotificationEntry entry) =>

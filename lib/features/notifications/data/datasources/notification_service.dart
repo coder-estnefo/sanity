@@ -5,6 +5,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../domain/entities/notification_entry.dart';
 import '../../domain/entities/reminder_settings.dart';
 
 abstract class NotificationService {
@@ -12,6 +13,13 @@ abstract class NotificationService {
   Future<bool> requestPermission();
   Future<void> scheduleAll(List<ScheduledReminder> reminders);
   Future<void> scheduleMilestones(List<ScheduledReminder> milestones);
+  Future<void> showNow({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+    NotificationKind kind = NotificationKind.soft,
+  });
   Future<void> cancelAll();
   Stream<String?> get notificationClicks;
 }
@@ -124,6 +132,24 @@ class LocalNotificationService implements NotificationService {
         payload: 'sanity://notifications?type=hard&id=${m.id}',
       );
     }
+  }
+
+  @override
+  Future<void> showNow({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+    NotificationKind kind = NotificationKind.soft,
+  }) async {
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails:
+          kind == NotificationKind.hard ? _hardDetails : _softDetails,
+      payload: payload ?? 'sanity://notifications?type=${kind.name}&id=$id',
+    );
   }
 
   @override

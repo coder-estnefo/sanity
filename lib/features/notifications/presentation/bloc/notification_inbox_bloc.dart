@@ -23,15 +23,16 @@ class ChangeNotificationFilter extends NotificationInboxEvent {
   List<Object?> get props => [filter];
 }
 
-class DeleteInboxNotification extends NotificationInboxEvent {
-  const DeleteInboxNotification(this.id);
-  final String id;
-  @override
-  List<Object?> get props => [id];
-}
+class SendTestNotificationEvent extends NotificationInboxEvent {
+  const SendTestNotificationEvent({
+    this.kind = NotificationKind.soft,
+    this.message,
+  });
+  final NotificationKind kind;
+  final String? message;
 
-class ClearAllNotifications extends NotificationInboxEvent {
-  const ClearAllNotifications();
+  @override
+  List<Object?> get props => [kind, message];
 }
 
 class NotificationInboxState extends Equatable {
@@ -45,13 +46,16 @@ class NotificationInboxState extends Equatable {
   final NotificationFilter filter;
   final bool loading;
 
-  List<NotificationEntry> get visibleEntries => switch (filter) {
-        NotificationFilter.all => allEntries,
-        NotificationFilter.soft =>
-          allEntries.where((e) => e.kind == NotificationKind.soft).toList(),
-        NotificationFilter.hard =>
-          allEntries.where((e) => e.kind == NotificationKind.hard).toList(),
-      };
+  List<NotificationEntry> get visibleEntries {
+    final filtered = switch (filter) {
+      NotificationFilter.all => allEntries,
+      NotificationFilter.soft =>
+        allEntries.where((e) => e.kind == NotificationKind.soft).toList(),
+      NotificationFilter.hard =>
+        allEntries.where((e) => e.kind == NotificationKind.hard).toList(),
+    };
+    return [...filtered]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+  }
 
   int countFor(NotificationFilter f) => switch (f) {
         NotificationFilter.all => allEntries.length,
@@ -80,31 +84,30 @@ class NotificationInboxBloc
     extends Bloc<NotificationInboxEvent, NotificationInboxState> {
   NotificationInboxBloc({
     required this.getHistory,
-    required this.deleteEntry,
-    required this.clearHistory,
+    this.triggerTest,
   }) : super(const NotificationInboxState()) {
     on<LoadNotificationInbox>((event, emit) async {
       final entries = await getHistory();
-      emit(state.copyWith(allEntries: entries, loading: false));
+      final sorted = [...entries]
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      emit(state.copyWith(allEntries: sorted, loading: false));
     });
 
     on<ChangeNotificationFilter>((event, emit) {
       emit(state.copyWith(filter: event.filter));
     });
 
-    on<DeleteInboxNotification>((event, emit) async {
-      await deleteEntry(event.id);
+    on<SendTestNotificationEvent>((event, emit) async {
+      if (triggerTest != null) {
+        await triggerTest!(kind: event.kind, message: event.message);
+      }
       final entries = await getHistory();
-      emit(state.copyWith(allEntries: entries));
-    });
-
-    on<ClearAllNotifications>((event, emit) async {
-      await clearHistory();
-      emit(state.copyWith(allEntries: []));
+      final sorted = [...entries]
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      emit(state.copyWith(allEntries: sorted, loading: false));
     });
   }
 
   final GetNotificationHistory getHistory;
-  final DeleteNotificationEntry deleteEntry;
-  final ClearNotificationHistory clearHistory;
+  final TriggerTestNotificationUseCase? triggerTest;
 }
