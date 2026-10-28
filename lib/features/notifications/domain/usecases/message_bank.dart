@@ -1,0 +1,36 @@
+/// Gentle, generic motivational messages. Never mention the addiction.
+class MessageBank {
+  static const messages = [
+    'One more day of light. Keep going.',
+    'You are stronger than this moment.',
+    'Breathe. This feeling will pass.',
+    'Every hour you hold on is a victory.',
+    'You chose freedom. Choose it again right now.',
+    'Be gentle with yourself. You are doing great.',
+    'Your future self is proud of you.',
+    'Cravings fade. Your strength stays.',
+    'Take a slow breath. You are not alone.',
+    'Small steps, big change. Keep walking.',
+    'The darkness lifts a little more each day.',
+    'You have already come so far.',
+    'Peace is built one choice at a time.',
+    'Pause. Pray or breathe. Then carry on.',
+    'You are worthy of a healthy, free life.',
+    'Look up. A new morning is always coming.',
+    'Courage is staying, one moment at a time.',
+    'Rest your mind. You are safe right now.',
+    'Your strength is greater than you know.',
+    'Today is a gift. Spend it well.',
+    'Progress, not perfection. You are on your way.',
+    'Hold on. Better days are already forming.',
+    'You are healing, even when it is hard to feel.',
+    'Choose hope. It is still yours.',
+    'You are loved, and you are enough.',
+    'Walk, stretch, drink some water. Care for yourself.',
+    'This hour is yours. Make it a peaceful one.',
+    'Freedom feels good. Protect it today.',
+    'Light is stronger than darkness. Keep shining.',
+    'You are not your urges. You are so much more.',
+  ];
+}
+
